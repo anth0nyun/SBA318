@@ -1,6 +1,7 @@
 import express from "express";
 import { attachRequestId } from "./middleware/attachRequestId.mjs";
 import { requestLogger } from "./middleware/requestLogger.mjs";
+import { errorHandler } from "./middleware/errorHandler.mjs";
 
 const app = express();
 const PORT = 3000;
@@ -20,6 +21,12 @@ app.get("/", (req, res) => {
   res.send("Task Manager API — try GET /health");
 });
 
+app.get("/boom", (req, res, next) => {
+  const err = new Error(req.query.msg || "Something went wrong!.");
+  err.status = Number(req.query.status) || 500; 
+  next(err); 
+});
+
 // 404 for unknown routes
 app.use((req, res) => {
     res.status(404).json({ err: "Not Found" })
@@ -28,3 +35,5 @@ app.use((req, res) => {
 app.listen(PORT, () => {
     console.log(`✅ Server listening at PORT:${PORT}`);
 });
+
+app.use(errorHandler);
