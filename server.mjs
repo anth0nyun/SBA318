@@ -2,38 +2,51 @@ import express from "express";
 import { attachRequestId } from "./middleware/attachRequestId.mjs";
 import { requestLogger } from "./middleware/requestLogger.mjs";
 import { errorHandler } from "./middleware/errorHandler.mjs";
+import { users, projects, tasks, nextIds } from "./data/store.mjs";
 
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
-
 // middleware
+app.use(express.json());
 app.use(attachRequestId);
 app.use(requestLogger);
 
-// test route
+// test routes
 app.get("/health", (req, res) => {
     res.json({ status: "ok", requestId: req.id });
 });
 
 app.get("/", (req, res) => {
-  res.send("Task Manager API — try GET /health");
+    res.send("Task Manager API — try GET /health");
 });
 
-app.get("/boom", (req, res, next) => {
-  const err = new Error(req.query.msg || "Something went wrong!.");
-  err.status = Number(req.query.status) || 500; 
-  next(err); 
+//debug route 
+app.get("/debug/state", (req, res) => {
+    res.json({
+        counts: {
+            users: users.length,
+            projects: projects.length,
+            tasks: tasks.length
+        },
+        sample: {
+            user: users[0] || null,
+            project: projects[0] || null,
+            task: tasks[0] || null
+        },
+        nextIds
+    });
 });
 
-// 404 for unknown routes
+
+// 404 
 app.use((req, res) => {
-    res.status(404).json({ err: "Not Found" })
+    res.status(404).json({ error: "Not found" });
 });
+
+// error handler 
+app.use(errorHandler);
 
 app.listen(PORT, () => {
-    console.log(`✅ Server listening at PORT:${PORT}`);
+    console.log(`✅ Server listening at http://localhost:${PORT}`);
 });
-
-app.use(errorHandler);
