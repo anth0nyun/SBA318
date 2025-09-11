@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { tasks, nextIds } from "../data/store.mjs";
+import { requireJson } from "../middleware/requireJson.mjs";
 
 const router = Router();
 
@@ -61,7 +62,7 @@ router.get("/:id", validateNumericId, (req, res) => {
 });
 
 // POST /tasks (create)
-router.post("/", (req, res) => {
+router.post("/", requireJson, (req, res) => {
     const { title, priority, dueDate, projectId, assignedTo } = req.body;
 
     if (!title || typeof title !== "string") {
@@ -83,7 +84,7 @@ router.post("/", (req, res) => {
 });
 
 // PATCH /tasks/:id
-router.patch("/:id", validateNumericId, (req, res) => {
+router.patch("/:id", requireJson, validateNumericId, (req, res) => {
     const idx = findIndexById(tasks, req.idNum);
     if (idx == -1) return res.status(404).json({ error: "Task not found" });
 
@@ -108,7 +109,7 @@ router.patch("/:id", validateNumericId, (req, res) => {
 });
 
 // PUT 
-router.put("/:id", validateNumericId, (req, res) => {
+router.put("/:id", requireJson, validateNumericId, (req, res) => {
     const idx = findIndexById(tasks, req.idNum);
     if (idx == -1) return res.status(404).json({ error: "Task not found" });
 
