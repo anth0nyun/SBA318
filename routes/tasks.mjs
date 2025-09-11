@@ -3,7 +3,17 @@ import { tasks, nextIds } from "../data/store.mjs";
 
 const router = Router();
 
-// Helper function to find index by number id
+// custom middleware validate :id is a number
+function validateNumericId(req, res, next) {
+    const num = Number(req.params.id);
+    if (Number.isNaN(num)) {
+        return res.status(400).json({ error: "Invalid id" });
+    }
+    req.idNum = num;
+    next();
+}
+
+// helper function to find index by number id
 function findIndexById(arr, id) {
     const target = Number(id);
     for (let i = 0; i < arr.length; i++) {
@@ -12,7 +22,7 @@ function findIndexById(arr, id) {
     return -1;
 }
 
-// GET
+// GET /tasks
 router.get("/", (req, res) => {
     const { completed, priority, projectId, assignedTo, search } = req.query;
 
@@ -43,14 +53,14 @@ router.get("/", (req, res) => {
     res.json(result);
 });
 
-// GET
-router.get("/:id", (req, res) => {
-    const idx = findIndexById(tasks, req.params.id);
+// GET /tasks/:id
+router.get("/:id", validateNumericId, (req, res) => {
+    const idx = findIndexById(tasks, req.idNum);
     if (idx == -1) return res.status(404).json({ error: "Task not found" });
     res.json(tasks[idx]);
 });
 
-// POST /tasks  (create)
+// POST /tasks (create)
 router.post("/", (req, res) => {
     const { title, priority, dueDate, projectId, assignedTo } = req.body;
 
@@ -72,43 +82,59 @@ router.post("/", (req, res) => {
     res.status(201).json(newTask);
 });
 
-// PATCH
-router.patch("/:id", (req, res, next) => {
-    const id = req.params.id;
-    const task = tasks.find((t) => t.id == id);
+// PATCH /tasks/:id
+router.patch("/:id", validateNumericId, (req, res) => {
+    const idx = findIndexById(tasks, req.idNum);
+    if (idx == -1) return res.status(404).json({ error: "Task not found" });
 
-    if (!task) return next();
+    const allowed = new Set(["title", "completed", "priority", "projectId", "assignedTo", "dueDate"]);
+    const updates = {};
+    for (const [k, v] of Object.entries(req.body || {})) {
+        if (allowed.has(k)) updates[k] = v;
+    }
+    if (Object.keys(updates).length == 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+    }
 
-    // Only update provided fields
-    Object.assign(task, req.body);
-    res.json(task);
+    // validation
+    if (updates.completed != null && typeof updates.completed !== "boolean") {
+        return res.status(400).json({ error: "completed must be boolean" });
+    }
+    if (updates.projectId != null) updates.projectId = Number(updates.projectId);
+    if (updates.assignedTo != null) updates.assignedTo = Number(updates.assignedTo);
+
+    tasks[idx] = { ...tasks[idx], ...updates };
+    res.json(tasks[idx]);
 });
 
 // PUT 
-router.put("/:id", (req, res, next) => {
-    const id = req.params.id;
-    const index = tasks.findIndex((t) => t.id == id);
+router.put("/:id", validateNumericId, (req, res) => {
+    const idx = findIndexById(tasks, req.idNum);
+    if (idx == -1) return res.status(404).json({ error: "Task not found" });
 
-    if (index == -1) return next();
+    const { title, completed, priority, projectId, assignedTo, dueDate } = req.body || {};
 
-    const { title, projectId = null, assignedTo = null, completed = false } = req.body;
+    if (typeof title !== "string" || typeof completed !== "boolean" || typeof priority !== "string") {
+        return res.status(400).json({ error: "PUT requires title (string), completed (boolean), priority (string)" });
+    }
 
-    tasks[index] = {
-        id: Number(id),
-        title,
-        projectId,
-        assignedTo,
-        completed: Boolean(completed),
+    tasks[idx] = {
+        id: req.idNum,
+        title: title.trim(),
+        completed,
+        priority,
+        projectId: projectId != null && projectId !== "" ? Number(projectId) : undefined,
+        assignedTo: assignedTo != null && assignedTo !== "" ? Number(assignedTo) : undefined,
+        dueDate: typeof dueDate === "string" ? dueDate : undefined
     };
 
-    res.json(tasks[index]);
+    res.json(tasks[idx]);
 });
 
 // DELETE /tasks/:id
-router.delete("/:id", (req, res) => {
-    const idx = findIndexById(tasks, req.params.id);
+router.delete("/:id", validateNumericId, (req, res) => {
+    const idx = findIndexById(tasks, req.idNum);
     if (idx == -1) return res.status(404).json({ error: "Task not found" });
-
     tasks.splice(idx, 1);
     res.json({ message: "Task deleted" });
 });
