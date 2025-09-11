@@ -7,7 +7,7 @@ const router = Router();
 function findIndexById(arr, id) {
     const target = Number(id);
     for (let i = 0; i < arr.length; i++) {
-        if (arr[i].id === target) return i;
+        if (arr[i].id == target) return i;
     }
     return -1;
 }
@@ -30,7 +30,7 @@ router.get("/", (req, res) => {
     }
 
     // text search in title
-    if (typeof search === "string" && search.trim() !== "") {
+    if (typeof search == "string" && search.trim() !== "") {
         const q = search.toLowerCase();
         const filtered = [];
         for (let i = 0; i < result.length; i++) {
@@ -63,7 +63,7 @@ router.post("/", (req, res) => {
         title: title.trim(),
         completed: false,
         priority: typeof priority == "string" ? priority : undefined, // "low"|"med"|"high"
-        dueDate: typeof dueDate == "string" ? dueDate : undefined,     // ISO date string
+        dueDate: typeof dueDate == "string" ? dueDate : undefined,
         projectId: projectId !== undefined && projectId !== "" ? Number(projectId) : undefined,
         assignedTo: assignedTo !== undefined && assignedTo !== "" ? Number(assignedTo) : undefined
     };
@@ -72,28 +72,27 @@ router.post("/", (req, res) => {
     res.status(201).json(newTask);
 });
 
-// PATCH — partial update
+// PATCH
 router.patch("/:id", (req, res, next) => {
     const id = req.params.id;
     const task = tasks.find((t) => t.id == id);
 
-    if (!task) return next(); // passes to 404 middleware in server.mjs
+    if (!task) return next();
 
     // Only update provided fields
     Object.assign(task, req.body);
     res.json(task);
 });
 
-// PUT — full replace
+// PUT 
 router.put("/:id", (req, res, next) => {
     const id = req.params.id;
     const index = tasks.findIndex((t) => t.id == id);
 
-    if (index === -1) return next(); // not found -> 404
+    if (index == -1) return next();
 
     const { title, projectId = null, assignedTo = null, completed = false } = req.body;
 
-    // Overwrite the whole object (keep the same id)
     tasks[index] = {
         id: Number(id),
         title,
