@@ -3,6 +3,7 @@ import { attachRequestId } from "./middleware/attachRequestId.mjs";
 import { requestLogger } from "./middleware/requestLogger.mjs";
 import { errorHandler } from "./middleware/errorHandler.mjs";
 import { users, projects, tasks, nextIds } from "./data/store.mjs";
+import tasksRouter from "./routes/tasks.mjs";
 
 const app = express();
 const PORT = 3000;
@@ -11,6 +12,7 @@ const PORT = 3000;
 app.use(express.json());
 app.use(attachRequestId);
 app.use(requestLogger);
+app.use("/tasks", tasksRouter);
 
 // test routes
 app.get("/health", (req, res) => {
