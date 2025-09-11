@@ -72,22 +72,37 @@ router.post("/", (req, res) => {
     res.status(201).json(newTask);
 });
 
-// PATCH /tasks/:id  (partial update)
-router.patch("/:id", (req, res) => {
-    const idx = findIndexById(tasks, req.params.id);
-    if (idx == -1) return res.status(404).json({ error: "Task not found" });
+// PATCH — partial update
+router.patch("/:id", (req, res, next) => {
+    const id = req.params.id;
+    const task = tasks.find((t) => t.id == id);
 
-    const t = tasks[idx];
-    const { title, completed, priority, dueDate, projectId, assignedTo } = req.body;
+    if (!task) return next(); // passes to 404 middleware in server.mjs
 
-    if (typeof title == "string") t.title = title.trim();
-    if (typeof completed == "boolean") t.completed = completed;
-    if (typeof priority == "string") t.priority = priority;
-    if (typeof dueDate == "string") t.dueDate = dueDate;
-    if (projectId !== undefined) t.projectId = projectId == "" ? undefined : Number(projectId);
-    if (assignedTo !== undefined) t.assignedTo = assignedTo == "" ? undefined : Number(assignedTo);
+    // Only update provided fields
+    Object.assign(task, req.body);
+    res.json(task);
+});
 
-    res.json(t);
+// PUT — full replace
+router.put("/:id", (req, res, next) => {
+    const id = req.params.id;
+    const index = tasks.findIndex((t) => t.id == id);
+
+    if (index === -1) return next(); // not found -> 404
+
+    const { title, projectId = null, assignedTo = null, completed = false } = req.body;
+
+    // Overwrite the whole object (keep the same id)
+    tasks[index] = {
+        id: Number(id),
+        title,
+        projectId,
+        assignedTo,
+        completed: Boolean(completed),
+    };
+
+    res.json(tasks[index]);
 });
 
 // DELETE /tasks/:id

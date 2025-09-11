@@ -14,7 +14,7 @@ app.use(attachRequestId);
 app.use(requestLogger);
 app.use("/tasks", tasksRouter);
 
-// test routes
+// routes
 app.get("/health", (req, res) => {
     res.json({ status: "ok", requestId: req.id });
 });
