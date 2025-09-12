@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { tasks, nextIds } from "../data/store.mjs";
 import { requireJson } from "../middleware/requireJson.mjs";
+import { sortList, paginate } from "../utils/listing.mjs";
 
 const router = Router();
 
@@ -23,10 +24,11 @@ function findIndexById(arr, id) {
     return -1;
 }
 
-// GET /tasks
+// GET /tasks  (search/filters + sort + paginate)
 router.get("/", (req, res) => {
     const { completed, priority, projectId, assignedTo, search } = req.query;
 
+    // start with a copy
     let result = [];
     for (let i = 0; i < tasks.length; i++) result.push(tasks[i]);
 
@@ -40,6 +42,12 @@ router.get("/", (req, res) => {
         result = filtered;
     }
 
+    // (optional) priority filter — keep if you add it later
+    // if (typeof priority === "string" && priority.trim() !== "") { ... }
+
+    // (optional) projectId / assignedTo filters — keep if you add them later
+    // ...
+
     // text search in title
     if (typeof search == "string" && search.trim() !== "") {
         const q = search.toLowerCase();
@@ -51,7 +59,18 @@ router.get("/", (req, res) => {
         result = filtered;
     }
 
-    res.json(result);
+    // sort + paginate
+    const allowed = ["id", "title", "priority", "completed", "dueDate", "projectId", "assignedTo"];
+    const field = allowed.includes(req.query.sortBy) ? req.query.sortBy : "id";
+    const dir = req.query.order === "desc" ? "desc" : "asc";
+
+    const sorted = sortList(result, field, dir);
+    const paged = paginate(sorted, req.query.page, req.query.limit);
+
+    res.json({
+        meta: { page: paged.page, limit: paged.limit, total: paged.total, pages: paged.pages, sortBy: field, order: dir },
+        data: paged.data
+    });
 });
 
 // GET /tasks/:id
@@ -83,8 +102,8 @@ router.post("/", requireJson, (req, res) => {
     res.status(201).json(newTask);
 });
 
-// PATCH /tasks/:id
-router.patch("/:id", requireJson, validateNumericId, (req, res) => {
+// PATCH /tasks/:id  (NOTE: validateNumericId BEFORE requireJson)
+router.patch("/:id", validateNumericId, requireJson, (req, res) => {
     const idx = findIndexById(tasks, req.idNum);
     if (idx == -1) return res.status(404).json({ error: "Task not found" });
 
@@ -108,8 +127,8 @@ router.patch("/:id", requireJson, validateNumericId, (req, res) => {
     res.json(tasks[idx]);
 });
 
-// PUT 
-router.put("/:id", requireJson, validateNumericId, (req, res) => {
+// PUT /tasks/:id  (NOTE: validateNumericId BEFORE requireJson)
+router.put("/:id", validateNumericId, requireJson, (req, res) => {
     const idx = findIndexById(tasks, req.idNum);
     if (idx == -1) return res.status(404).json({ error: "Task not found" });
 

@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { users, tasks } from "../data/store.mjs";
+import { users, tasks, nextIds } from "../data/store.mjs";
 import { requireJson } from "../middleware/requireJson.mjs";
+import { sortList, paginate } from "../utils/listing.mjs";
 
 const router = Router();
 
@@ -20,7 +21,18 @@ function findIndexById(arr, id) {
 
 // GET all users 
 router.get("/", (req, res) => {
-    res.json(users);
+
+    const allowed = ["id", "name", "username", "email"];
+    const field = allowed.includes(req.query.sortBy) ? req.query.sortBy : "id";
+    const dir = req.query.order === "desc" ? "desc" : "asc";
+
+    const sorted = sortList(users, field, dir);
+    const paged = paginate(sorted, req.query.page, req.query.limit);
+
+    res.json({
+        meta: { page: paged.page, limit: paged.limit, total: paged.total, pages: paged.pages, sortBy: field, order: dir },
+        data: paged.data
+    });
 });
 
 // GET one user

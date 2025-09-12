@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { projects, tasks, nextIds } from "../data/store.mjs";
 import { requireJson } from "../middleware/requireJson.mjs";
+import { sortList, paginate } from "../utils/listing.mjs";
 
 
 const router = Router();
@@ -27,7 +28,17 @@ function findIndexById(arr, id) {
 
 // GET all projects
 router.get("/", (req, res) => {
-    res.json(projects);
+    const allowed = ["id", "name"];
+    const field = allowed.includes(req.query.sortBy) ? req.query.sortBy : "id";
+    const dir = req.query.order === "desc" ? "desc" : "asc";
+
+    const sorted = sortList(projects, field, dir);
+    const paged = paginate(sorted, req.query.page, req.query.limit);
+
+    res.json({
+        meta: { page: paged.page, limit: paged.limit, total: paged.total, pages: paged.pages, sortBy: field, order: dir },
+        data: paged.data
+    });
 });
 
 // GET one project
